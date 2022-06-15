@@ -1,51 +1,73 @@
 package com.zrmiller;
 
 import com.zrmiller.saving.SaveFile;
-import com.zrmiller.zupdate.DownloadVersion;
 import com.zrmiller.zupdate.MainFrame;
 import com.zrmiller.zupdate.UpdateManager;
 import com.zrmiller.zupdate.UpdateSaveFile;
+import com.zrmiller.zupdate.ZLogger;
 
 import javax.swing.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+import java.util.Properties;
 
 /**
  * Hello world!
  */
 public class App {
 
-    private static String directory = "D:\\ZUpdate\\";
+    private static final String directory = "D:/ZUpdate/";
+    public static String APP_NAME;
+    public static String APP_VERSION;
+    public static String APP_URL;
 
     public static SaveFile<UpdateSaveFile> updateSaveFile = new SaveFile<>(directory + "update.json", UpdateSaveFile.class);
+    private static int version = 1;
 
     public static void main(String[] args) {
-
-        UpdateManager updateManager = new UpdateManager("zmilla93", "slimtrade", "D:\\ZUpdate\\", updateSaveFile);
-        System.out.println("Launched:" + updateManager.getLaunchPath());
+        ZLogger.open(directory, args);
+        ZLogger.log("Program Launched: " + Arrays.toString(args));
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, updateSaveFile);
         updateManager.continueUpdateProcess(args);
-//        DownloadVersion version = updateManager.fetchLatestVersion();
-//        updateManager.downloadFile(version);
+        if (updateManager.isUpdateAvailable()) {
+            // TODO : Add GUI Here
+            updateManager.runUpdateProcess();
+        }
 
-
+        final String[] finalArgs = args;
         try {
             SwingUtilities.invokeAndWait(() -> {
-                MainFrame mainFrame = new MainFrame(args);
+                MainFrame mainFrame = new MainFrame(finalArgs, updateManager.APP_VERSION);
                 mainFrame.setVisible(true);
             });
         } catch (InterruptedException | InvocationTargetException e) {
             e.printStackTrace();
         }
 
-//        updateManager.d
+        ZLogger.log("Program Launched!");
 
-//        System.out.println(System.getProperty("user.dir"));
-//
-//        UpdateManager updateManager = new UpdateManager("zmilla93", "slimtrade", "D:\\ZUpdate\\", updateSaveFile);
-//        String classPath = System.getProperty("java.class.path");
-//        System.out.println("CP" + classPath);
-//        System.out.println("V:" + updateManager.readCurrentVersion());
-//        updateManager.writeTag("ASDFASDF");
-//        System.out.println("V:" + updateManager.readCurrentVersion());
-        return;
+        Runtime.getRuntime().addShutdownHook(new Thread(ZLogger::close));
+
     }
+
+    public static String getAppVersion() {
+        if (APP_VERSION == null) {
+            final Properties properties = new Properties();
+            try {
+                InputStream stream = App.class.getClassLoader().getResourceAsStream("project.properties");
+                properties.load(stream);
+                assert stream != null;
+                stream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            APP_NAME = properties.getProperty("name");
+            APP_VERSION = "v" + properties.getProperty("version");
+            APP_URL = "v" + properties.getProperty("url");
+        }
+        return APP_VERSION;
+    }
+
 }
