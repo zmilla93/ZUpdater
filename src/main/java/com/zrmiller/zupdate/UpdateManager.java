@@ -83,12 +83,11 @@ public class UpdateManager {
 
     /**
      * Continues the update process if necessary. This should be called before anything else.
-     * Used the command line args to pass information between runs.
+     * Uses command line args to pass information between runs.
      *
      * @param args The command line arguments of the program.
      */
     public void continueUpdateProcess(String[] args) {
-        System.out.println("CONTINUE PROCESS : " + Arrays.toString(args));
         boolean download = false;
         boolean copy = false;
         boolean clean = false;
@@ -182,7 +181,9 @@ public class UpdateManager {
             properties.load(stream);
             stream.close();
         } catch (IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
+            System.err.println("Properties not found! Create a 'project.properties' file in the resources folder, then add the lines 'version=${project.version}' and 'artifactId=${project.artifactId}'.");
+            return;
         }
         APP_NAME = properties.getProperty("name");
         APP_VERSION = "v" + properties.getProperty("version");

@@ -34,6 +34,8 @@ public class App {
         if (updateManager.isUpdateAvailable()) {
             // TODO : Add GUI Here
             updateManager.runUpdateProcess();
+
+
         }
 
         final String[] finalArgs = args;

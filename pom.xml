@@ -17,6 +17,14 @@
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
 
+  <repositories>
+    <repository>
+      <id>repo2</id>
+      <name>your custom repo</name>
+      <url>https://github.com/zmilla93/MavenRepoExample/tree/maven-repo/org/example/MavenRepoExample/1.0-SNAPSHOT/</url>
+    </repository>
+  </repositories>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
