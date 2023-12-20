@@ -65,6 +65,16 @@ public class ZLogger {
         }
     }
 
+    public static void log(String[] messages) {
+        for (String message : messages)
+            log(message);
+    }
+
+    public static void log(StackTraceElement[] elements) {
+        for (StackTraceElement element : elements)
+            log(element.toString());
+    }
+
     public static String getLaunchArg() {
         return logPrefix + logFile;
     }
