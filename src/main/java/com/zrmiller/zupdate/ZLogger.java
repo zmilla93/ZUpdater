@@ -53,12 +53,21 @@ public class ZLogger {
         }
     }
 
+    public static void err(String message){
+        log(message, true);
+    }
+
     public static void log(String message) {
+        log(message, false);
+    }
+
+    public static void log(String message, boolean error) {
         try {
             String time = timestampFormatter.format(System.currentTimeMillis());
             time = time + " | ";
             writer.write(time + message + "\n");
-            System.out.println(message);
+            if (error) System.err.println(message);
+            else System.out.println(message);
             writer.flush();
         } catch (IOException e) {
             e.printStackTrace();

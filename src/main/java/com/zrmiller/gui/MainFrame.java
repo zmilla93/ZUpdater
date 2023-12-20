@@ -9,8 +9,8 @@ public class MainFrame extends JFrame {
         setSize(400, 400);
         JPanel argsPanel = new JPanel(new FlowLayout());
         argsPanel.add(new JLabel(version));
-        for (int i = 0; i < args.length; i++) {
-            argsPanel.add(new JLabel(args[i]));
+        for (String arg : args) {
+            argsPanel.add(new JLabel(arg));
         }
         getContentPane().setLayout(new BorderLayout());
         getContentPane().add(argsPanel, BorderLayout.CENTER);
