@@ -39,9 +39,7 @@ public class App {
 
         // FIXME : Copying files sometimes fails, not sure why
         UpdateManager updateManager = null;
-        updateManager = runUpdateProcess(args);
-//        String version = APP_VERSION;
-//        System.out.println(version);
+        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {
@@ -59,7 +57,7 @@ public class App {
 
     }
 
-    public static UpdateManager runUpdateProcess(String[] args) {
+    public static UpdateManager handleUpdate(String[] args) {
         UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
         updateManager.continueUpdateProcess(args);
         if (updateManager.isUpdateAvailable()) {

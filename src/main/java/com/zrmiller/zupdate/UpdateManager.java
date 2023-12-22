@@ -30,26 +30,18 @@ import java.util.Properties;
  */
 public class UpdateManager {
 
-    // These variables are read from pom.xml
-//    public String APP_VERSION;
-//    public String APP_NAME;
-//    public String APP_URL;
-//    private String CURRENT_VERSION;
-    private AppVersion CURRENT_VERSION;
 
-    // Validation checks
-    private boolean appSettingsHaveBeenRead = false;
-
+    private final AppVersion CURRENT_VERSION;
     private final String DIRECTORY;
     private final String LATEST_VERSION_URL;
     private final String ALL_RELEASES_URL;
 
     private static final int BYTE_BUFFER_SIZE = 1024 * 4;
 
-    //    private final SaveFile<UpdateSaveFile> saveFile;
     private DownloadVersion latestVersion;
     private String launchPath;
     private String jarName;
+    private final boolean VALID_DIRECTORY;
 
     private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
 
@@ -70,6 +62,7 @@ public class UpdateManager {
         this.CURRENT_VERSION = version;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
+        VALID_DIRECTORY = validateDirectory();
     }
 
     /**
@@ -136,7 +129,10 @@ public class UpdateManager {
      * @return Update available
      */
     public boolean isUpdateAvailable(boolean forceCheck) {
-//        if (!appSettingsHaveBeenRead) return false;
+        if (!VALID_DIRECTORY) {
+            ZLogger.log("Failed to validate directory: " + DIRECTORY);
+            return false;
+        }
         // FIXME: Don't check clean here as it will break a repeat check
         if (clean) return false;
         String currentVersionString = CURRENT_VERSION.toString();
@@ -180,21 +176,6 @@ public class UpdateManager {
         }
     }
 
-//    private boolean readAppData() {
-//        Properties properties = new Properties();
-//        try {
-//            InputStream stream = new BufferedInputStream(Objects.requireNonNull(UpdateManager.class.getClassLoader().getResourceAsStream("project.properties")));
-//            properties.load(stream);
-//            stream.close();
-//        } catch (IOException e) {
-//            ZLogger.err("Properties not found! Create a 'project.properties' file in the resources folder, then add the lines 'version=${project.version}' and 'artifactId=${project.artifactId}'.");
-//            return false;
-//        }
-//        APP_NAME = properties.getProperty("name");
-//        APP_VERSION = "v" + properties.getProperty("version");
-//        APP_URL = properties.getProperty("url");
-//        return true;
-//    }
 
     private DownloadVersion fetchLatestVersion() {
         System.out.println("Fetching latest version... " + LATEST_VERSION_URL);
@@ -232,16 +213,16 @@ public class UpdateManager {
 //        saveFile.saveToDisk();
 //    }
 
+    // FIXME : Move to utility?
     private boolean validateDirectory() {
         File file = new File(DIRECTORY);
-        if (file.exists())
-            return file.isDirectory();
+        if (file.exists()) return file.isDirectory();
         return file.mkdirs();
     }
 
-    public DownloadVersion getLatestVersion() {
-        return latestVersion;
-    }
+//    public DownloadVersion getLatestVersion() {
+//        return latestVersion;
+//    }
 
 //    public String getCurrentVersionTag() {
 //        return APP_VERSION;
