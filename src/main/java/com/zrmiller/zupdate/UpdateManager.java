@@ -2,7 +2,6 @@ package com.zrmiller.zupdate;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.zrmiller.saving.SaveFile;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -32,9 +31,11 @@ import java.util.Properties;
 public class UpdateManager {
 
     // These variables are read from pom.xml
-    public String APP_VERSION;
-    public String APP_NAME;
-    public String APP_URL;
+//    public String APP_VERSION;
+//    public String APP_NAME;
+//    public String APP_URL;
+//    private String CURRENT_VERSION;
+    private AppVersion CURRENT_VERSION;
 
     // Validation checks
     private boolean appSettingsHaveBeenRead = false;
@@ -45,7 +46,7 @@ public class UpdateManager {
 
     private static final int BYTE_BUFFER_SIZE = 1024 * 4;
 
-    private final SaveFile<UpdateSaveFile> saveFile;
+    //    private final SaveFile<UpdateSaveFile> saveFile;
     private DownloadVersion latestVersion;
     private String launchPath;
     private String jarName;
@@ -64,12 +65,11 @@ public class UpdateManager {
      * @param repo      GitHub repo name
      * @param directory Directory where downloaded file will be stored temporarily
      */
-    public UpdateManager(String author, String repo, String directory, SaveFile<UpdateSaveFile> saveFile) {
+    public UpdateManager(String author, String repo, String directory, AppVersion version) {
         this.DIRECTORY = directory;
-        this.saveFile = saveFile;
+        this.CURRENT_VERSION = version;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
-        appSettingsHaveBeenRead = readAppData();
     }
 
     /**
@@ -110,8 +110,8 @@ public class UpdateManager {
             launchArgs.add(LAUNCH_PATH_PREFIX + launchPath);
         }
         if (download) {
-            downloadFile();
-            runProcess(DIRECTORY + jarName, UpdateCommand.PATCH, launchArgs);
+            boolean success = downloadFile();
+            if (success) runProcess(DIRECTORY + jarName, UpdateCommand.PATCH, launchArgs);
         } else if (copy) {
             copy();
             runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
@@ -136,10 +136,10 @@ public class UpdateManager {
      * @return Update available
      */
     public boolean isUpdateAvailable(boolean forceCheck) {
-        if (!appSettingsHaveBeenRead) return false;
+//        if (!appSettingsHaveBeenRead) return false;
         // FIXME: Don't check clean here as it will break a repeat check
         if (clean) return false;
-        String currentVersionString = APP_VERSION;
+        String currentVersionString = CURRENT_VERSION.toString();
         if (currentVersionString == null)
             return false;
         if (latestVersion == null || forceCheck) {
@@ -180,21 +180,21 @@ public class UpdateManager {
         }
     }
 
-    private boolean readAppData() {
-        Properties properties = new Properties();
-        try {
-            InputStream stream = new BufferedInputStream(Objects.requireNonNull(UpdateManager.class.getClassLoader().getResourceAsStream("project.properties")));
-            properties.load(stream);
-            stream.close();
-        } catch (IOException e) {
-            ZLogger.err("Properties not found! Create a 'project.properties' file in the resources folder, then add the lines 'version=${project.version}' and 'artifactId=${project.artifactId}'.");
-            return false;
-        }
-        APP_NAME = properties.getProperty("name");
-        APP_VERSION = "v" + properties.getProperty("version");
-        APP_URL = properties.getProperty("url");
-        return true;
-    }
+//    private boolean readAppData() {
+//        Properties properties = new Properties();
+//        try {
+//            InputStream stream = new BufferedInputStream(Objects.requireNonNull(UpdateManager.class.getClassLoader().getResourceAsStream("project.properties")));
+//            properties.load(stream);
+//            stream.close();
+//        } catch (IOException e) {
+//            ZLogger.err("Properties not found! Create a 'project.properties' file in the resources folder, then add the lines 'version=${project.version}' and 'artifactId=${project.artifactId}'.");
+//            return false;
+//        }
+//        APP_NAME = properties.getProperty("name");
+//        APP_VERSION = "v" + properties.getProperty("version");
+//        APP_URL = properties.getProperty("url");
+//        return true;
+//    }
 
     private DownloadVersion fetchLatestVersion() {
         System.out.println("Fetching latest version... " + LATEST_VERSION_URL);
@@ -227,10 +227,10 @@ public class UpdateManager {
         progressListeners.remove(progressListener);
     }
 
-    public void writeTag(String tag) {
-        saveFile.data.tag = tag;
-        saveFile.saveToDisk();
-    }
+//    public void writeTag(String tag) {
+//        saveFile.data.tag = tag;
+//        saveFile.saveToDisk();
+//    }
 
     private boolean validateDirectory() {
         File file = new File(DIRECTORY);
@@ -243,15 +243,14 @@ public class UpdateManager {
         return latestVersion;
     }
 
-    public String getCurrentVersionTag() {
-        return APP_VERSION;
-    }
+//    public String getCurrentVersionTag() {
+//        return APP_VERSION;
+//    }
 
     private String getLaunchPath() {
         try {
             String path = UpdateManager.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-            if (path.startsWith("/"))
-                path = path.replaceFirst("/", "");
+            if (path.startsWith("/")) path = path.replaceFirst("/", "");
             return path;
         } catch (URISyntaxException e) {
             e.printStackTrace();
@@ -259,7 +258,9 @@ public class UpdateManager {
         }
     }
 
-    // Updating
+    ////////////////////////
+    //  Updating Actions  //
+    ////////////////////////
 
     /**
      * Downloads the new .jar file from GitHub.
@@ -269,10 +270,8 @@ public class UpdateManager {
     private boolean downloadFile() {
         ZLogger.log("Downloading new version...");
         try {
-            if (latestVersion == null)
-                fetchLatestVersion();
-            if (latestVersion == null)
-                return false;
+            if (latestVersion == null) fetchLatestVersion();
+            if (latestVersion == null) return false;
             ZLogger.log("File Name: " + latestVersion.FILE_NAME + "...");
             ZLogger.log("Version: " + latestVersion.TAG);
             ZLogger.log("URL: " + latestVersion.DOWNLOAD_URL);

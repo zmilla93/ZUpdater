@@ -1,14 +1,16 @@
 package com.zrmiller.gui;
 
+import com.zrmiller.zupdate.AppVersion;
+
 import javax.swing.*;
 import java.awt.*;
 
 public class MainFrame extends JFrame {
 
-    public MainFrame(String[] args, String version) {
+    public MainFrame(String[] args, AppVersion version) {
         setSize(400, 400);
         JPanel argsPanel = new JPanel(new FlowLayout());
-        argsPanel.add(new JLabel(version));
+        argsPanel.add(new JLabel(version.toString()));
         for (String arg : args) {
             argsPanel.add(new JLabel(arg));
         }
