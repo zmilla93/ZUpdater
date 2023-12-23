@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -38,7 +39,7 @@ public class UpdateManager {
 
     private ReleaseVersion latestRelease;
     private String launchPath;
-//    private String jarName;
+    //    private String jarName;
 //    private String originalJarName;
     private final boolean VALID_DIRECTORY;
 
@@ -108,7 +109,7 @@ public class UpdateManager {
             boolean success = downloadFile();
             if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateCommand.PATCH, launchArgs);
         } else if (currentAction == UpdateCommand.PATCH) {
-            copy();
+            patch();
             runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
         } else if (currentAction == UpdateCommand.CLEAN) {
             clean();
@@ -178,16 +179,22 @@ public class UpdateManager {
 
 
     private ReleaseVersion fetchLatestReleaseData() {
-        System.out.println("Fetching latest release from " + LATEST_VERSION_URL + "...");
+        ZLogger.log("Fetching latest release from " + LATEST_VERSION_URL + "...");
         try {
+            // Fetch the latest release info
             HttpURLConnection httpConnection = (HttpURLConnection) (new URL(LATEST_VERSION_URL).openConnection());
-            BufferedReader inputStream = new BufferedReader(new InputStreamReader(httpConnection.getInputStream()));
-            StringBuilder builder = new StringBuilder();
-            while (inputStream.ready()) {
-                builder.append(inputStream.readLine());
+            BufferedReader inputStream;
+            try {
+                inputStream = new BufferedReader(new InputStreamReader(httpConnection.getInputStream()));
+            } catch (IOException e) {
+                ZLogger.log("Failed to connect to GitHub. This is either a connection issue or the API rate has been exceeded.");
+                return null;
             }
+            StringBuilder builder = new StringBuilder();
+            while (inputStream.ready()) builder.append(inputStream.readLine());
             inputStream.close();
             JsonObject json = JsonParser.parseString(builder.toString()).getAsJsonObject();
+            // Generate a ReleaseVersion
             String tag = json.get("tag_name").getAsString();
             JsonObject asset = json.getAsJsonArray("assets").get(0).getAsJsonObject();
             String fileName = asset.get("name").getAsString();
@@ -288,29 +295,29 @@ public class UpdateManager {
      *
      * @return Success
      */
-    private boolean copy() {
+    private void patch() {
         ZLogger.log("Copying file...");
         ZLogger.log("Target: " + DIRECTORY + TEMP_FILE_NAME);
         ZLogger.log("Destination: " + launchPath);
-        int MAX_COPY_ATTEMPTS = 5;
-        for (int i = 0; i < MAX_COPY_ATTEMPTS; i++) {
-            try {
-                Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
-                ZLogger.log("Files copied successfully.");
-                return true;
-            } catch (IOException e) {
-//                e.printStackTrace();
-                ZLogger.log("Error while copying files, retrying... (" + (i + 1) + ")");
-                ZLogger.log(e.getStackTrace());
-            }
+        try {
+            Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
+            ZLogger.log("Files copied successfully.");
+        } catch (IOException e) {
+            ZLogger.log("Failed to copy files!");
+            ZLogger.log(e.getStackTrace());
         }
-        ZLogger.log("Failed to copy files!");
-        return false;
     }
 
     private void clean() {
-        // TODO : This
         ZLogger.log("Cleaning...");
+        Path tempFilePath = Paths.get(DIRECTORY + TEMP_FILE_NAME);
+        try {
+            Files.delete(tempFilePath);
+            ZLogger.log("Deleted temporary file: " + DIRECTORY + TEMP_FILE_NAME);
+        } catch (IOException e) {
+            ZLogger.log("Failed to delete file: " + DIRECTORY + TEMP_FILE_NAME);
+            ZLogger.log(e.getStackTrace());
+        }
     }
 
 }
