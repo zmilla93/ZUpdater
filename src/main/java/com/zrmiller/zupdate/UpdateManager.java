@@ -46,6 +46,9 @@ public class UpdateManager {
     private UpdateAction currentAction = UpdateAction.NONE;
     private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
 
+    private static final int MAX_ACTION_ATTEMPTS = 5;
+    private static final int ACTION_RETRY_DELAY_MS = 50;
+
     /**
      * Directory will contain update.json and store temp files.
      *
@@ -271,13 +274,24 @@ public class UpdateManager {
         ZLogger.log("Copying file...");
         ZLogger.log("Target: " + DIRECTORY + TEMP_FILE_NAME);
         ZLogger.log("Destination: " + launchPath);
-        try {
-            Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
-            ZLogger.log("File copied successfully.");
-        } catch (IOException e) {
-            ZLogger.log("Failed to copy file!");
-            ZLogger.log(e.getStackTrace());
+        Exception exception = null;
+        for (int i = 1; i <= MAX_ACTION_ATTEMPTS; i++) {
+            try {
+                Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
+                ZLogger.log("File copied successfully.");
+                return;
+            } catch (IOException e) {
+                ZLogger.log("Failed to copy file, retrying...");
+                exception = e;
+                try {
+                    Thread.sleep(ACTION_RETRY_DELAY_MS);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
         }
+        ZLogger.log("Failed to copy file!");
+        ZLogger.log(exception.getStackTrace());
     }
 
     /**
@@ -286,13 +300,24 @@ public class UpdateManager {
     private void clean() {
         ZLogger.log("Cleaning...");
         Path tempFilePath = Paths.get(DIRECTORY + TEMP_FILE_NAME);
-        try {
-            Files.delete(tempFilePath);
-            ZLogger.log("Deleted temporary file: " + DIRECTORY + TEMP_FILE_NAME);
-        } catch (IOException e) {
-            ZLogger.log("Failed to delete file: " + DIRECTORY + TEMP_FILE_NAME);
-            ZLogger.log(e.getStackTrace());
+        Exception exception = null;
+        for (int i = 1; i <= MAX_ACTION_ATTEMPTS; i++) {
+            try {
+                Files.delete(tempFilePath);
+                ZLogger.log("Deleted temporary file: " + DIRECTORY + TEMP_FILE_NAME);
+                return;
+            } catch (IOException e) {
+                ZLogger.log("Failed to delete file, retrying...");
+                exception = e;
+                try {
+                    Thread.sleep(ACTION_RETRY_DELAY_MS);
+                } catch (InterruptedException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
         }
+        ZLogger.log("Failed to delete file: " + DIRECTORY + TEMP_FILE_NAME);
+        ZLogger.log(exception.getStackTrace());
     }
 
 }
