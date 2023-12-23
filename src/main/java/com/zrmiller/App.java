@@ -2,7 +2,6 @@ package com.zrmiller;
 
 import com.zrmiller.gui.MainFrame;
 import com.zrmiller.gui.ProgressFrame;
-import com.zrmiller.saving.SaveFile;
 import com.zrmiller.zupdate.*;
 
 import javax.swing.*;
@@ -23,12 +22,14 @@ public class App {
     public static ProgressFrame progressFrame;
     public static AppInfo appInfo;
 
-    public static SaveFile<UpdateSaveFile> updateSaveFile = new SaveFile<>(directory + "update.json", UpdateSaveFile.class);
+//    public static SaveFile<UpdateSaveFile> updateSaveFile = new SaveFile<>(directory + "update.json", UpdateSaveFile.class);
 
     public static void main(String[] args) {
         ZLogger.open(directory, args);
         ZLogger.log("Program Launched: " + Arrays.toString(args));
         appInfo = readAppInfo();
+
+        AppVersion.runTest();
 
         // TEMP PROGRESS BAR:
         try {
@@ -37,9 +38,9 @@ public class App {
             throw new RuntimeException(e);
         }
 
-        // FIXME : Copying files sometimes fails, not sure why
+        // FIXME : Copying files sometimes fails, not sure why (I think it is from a previous jar file being open)
         UpdateManager updateManager = null;
-//        updateManager = handleUpdate(args);
+        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {
@@ -60,7 +61,7 @@ public class App {
     public static UpdateManager handleUpdate(String[] args) {
         UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
         updateManager.continueUpdateProcess(args);
-        if (updateManager.isUpdateAvailable()) {
+        if (updateManager.getCurrentUpdateAction() != UpdateCommand.CLEAN && updateManager.isUpdateAvailable()) {
             updateManager.addProgressListener(progressFrame);
             try {
                 SwingUtilities.invokeAndWait(() -> {

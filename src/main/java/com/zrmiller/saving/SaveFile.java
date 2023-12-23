@@ -15,6 +15,7 @@ import java.util.TimerTask;
 /**
  * Allows easy linking of a data class, a json save file, and a list of ISavable components.
  */
+@Deprecated
 public class SaveFile<T> {
 
     public T data;

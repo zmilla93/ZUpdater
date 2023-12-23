@@ -38,15 +38,17 @@ public class UpdateManager {
 
     private ReleaseVersion latestRelease;
     private String launchPath;
-    private String jarName;
+//    private String jarName;
+//    private String originalJarName;
     private final boolean VALID_DIRECTORY;
 
     private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
 
     private static final String JAR_PREFIX = "jar:";
     private static final String LAUNCH_PATH_PREFIX = "launcher:";
+    private static final String TEMP_FILE_NAME = "SlimTrade-Updater.jar";
 
-    private boolean clean = false;
+    private UpdateCommand currentAction = UpdateCommand.NONE;
 
     /**
      * Directory will contain update.json and store temp files.
@@ -70,6 +72,8 @@ public class UpdateManager {
         ZLogger.log("Running update process...");
         if (!isUpdateAvailable()) return;
         ZLogger.log("JARNAME:" + latestRelease.FILE_NAME);
+        // FIXME : Make sure jar:[JarName] is correct. Should this be the original jar name or the remote jar name?
+        //         That arg might not even be used.
         String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), JAR_PREFIX + latestRelease.FILE_NAME, LAUNCH_PATH_PREFIX + getLaunchPath()};
         continueUpdateProcess(args);
     }
@@ -81,32 +85,32 @@ public class UpdateManager {
      * @param args The command line arguments of the program.
      */
     public void continueUpdateProcess(String[] args) {
-        boolean download = false;
-        boolean copy = false;
-//        boolean clean = false;
         ArrayList<String> launchArgs = new ArrayList<>();
         for (String arg : args) {
             if (arg.startsWith(LAUNCH_PATH_PREFIX)) {
                 launchArgs.add(arg);
                 launchPath = arg.replaceFirst(LAUNCH_PATH_PREFIX, "");
-                jarName = launchPath.replaceFirst(".*[\\\\/]", "");
+//                jarName = launchPath.replaceFirst(".*[\\\\/]", "");
+                ZLogger.log("Launcher Path: " + launchPath);
+//                ZLogger.log("jarName: " + jarName);
                 break;
             }
-            if (arg.equals(UpdateCommand.DOWNLOAD.toString())) download = true;
-            if (arg.equals(UpdateCommand.PATCH.toString())) copy = true;
-            if (arg.equals(UpdateCommand.CLEAN.toString())) clean = true;
+            if (arg.equals(UpdateCommand.DOWNLOAD.toString())) currentAction = UpdateCommand.DOWNLOAD;
+            if (arg.equals(UpdateCommand.PATCH.toString())) currentAction = UpdateCommand.PATCH;
+            if (arg.equals(UpdateCommand.CLEAN.toString())) currentAction = UpdateCommand.CLEAN;
         }
         if (launchPath == null) {
             launchPath = getLaunchPath();
             launchArgs.add(LAUNCH_PATH_PREFIX + launchPath);
         }
-        if (download) {
+        // FIXME: Convert to switch
+        if (currentAction == UpdateCommand.DOWNLOAD) {
             boolean success = downloadFile();
-            if (success) runProcess(DIRECTORY + jarName, UpdateCommand.PATCH, launchArgs);
-        } else if (copy) {
+            if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateCommand.PATCH, launchArgs);
+        } else if (currentAction == UpdateCommand.PATCH) {
             copy();
             runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
-        } else if (clean) {
+        } else if (currentAction == UpdateCommand.CLEAN) {
             clean();
         }
     }
@@ -131,13 +135,11 @@ public class UpdateManager {
             ZLogger.log("Failed to validate directory: " + DIRECTORY);
             return false;
         }
-        // FIXME: Don't check clean here as it will break a repeat check
-        if (clean) return false;
         String currentVersionString = CURRENT_VERSION.toString();
         if (currentVersionString == null)
             return false;
         if (latestRelease == null || forceCheck) {
-            latestRelease = fetchLatestRelease();
+            latestRelease = fetchLatestReleaseData();
             if (latestRelease == null)
                 return false;
         }
@@ -175,7 +177,7 @@ public class UpdateManager {
     }
 
 
-    private ReleaseVersion fetchLatestRelease() {
+    private ReleaseVersion fetchLatestReleaseData() {
         System.out.println("Fetching latest release from " + LATEST_VERSION_URL + "...");
         try {
             HttpURLConnection httpConnection = (HttpURLConnection) (new URL(LATEST_VERSION_URL).openConnection());
@@ -198,33 +200,12 @@ public class UpdateManager {
         }
     }
 
-    public void addProgressListener(IUpdateProgressListener progressListener) {
-        progressListeners.add(progressListener);
-    }
-
-    public void removeProgressListener(IUpdateProgressListener progressListener) {
-        progressListeners.remove(progressListener);
-    }
-
-//    public void writeTag(String tag) {
-//        saveFile.data.tag = tag;
-//        saveFile.saveToDisk();
-//    }
-
     // FIXME : Move to utility?
     private boolean validateDirectory() {
         File file = new File(DIRECTORY);
         if (file.exists()) return file.isDirectory();
         return file.mkdirs();
     }
-
-//    public DownloadVersion getLatestVersion() {
-//        return latestVersion;
-//    }
-
-//    public String getCurrentVersionTag() {
-//        return APP_VERSION;
-//    }
 
     private String getLaunchPath() {
         try {
@@ -235,6 +216,22 @@ public class UpdateManager {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public UpdateCommand getCurrentUpdateAction() {
+        return currentAction;
+    }
+
+    /////////////////////////
+    //  Progress Listeners //
+    /////////////////////////
+
+    public void addProgressListener(IUpdateProgressListener progressListener) {
+        progressListeners.add(progressListener);
+    }
+
+    public void removeProgressListener(IUpdateProgressListener progressListener) {
+        progressListeners.remove(progressListener);
     }
 
     ////////////////////////
@@ -249,7 +246,7 @@ public class UpdateManager {
     private boolean downloadFile() {
         ZLogger.log("Downloading new version...");
         try {
-            if (latestRelease == null) fetchLatestRelease();
+            if (latestRelease == null) fetchLatestReleaseData();
             if (latestRelease == null) return false;
             ZLogger.log("File Name: " + latestRelease.FILE_NAME + "...");
             ZLogger.log("Version: " + latestRelease.TAG);
@@ -260,7 +257,7 @@ public class UpdateManager {
             int fileSize = httpConnection.getContentLength();
             ZLogger.log("File size:" + fileSize);
             BufferedInputStream inputStream = new BufferedInputStream(httpConnection.getInputStream());
-            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + latestRelease.FILE_NAME)));
+            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + TEMP_FILE_NAME)));
             byte[] data = new byte[BYTE_BUFFER_SIZE];
             int totalBytesRead = 0;
             int numBytesRead;
@@ -268,11 +265,9 @@ public class UpdateManager {
             while ((numBytesRead = inputStream.read(data, 0, BYTE_BUFFER_SIZE)) >= 0) {
                 outputStream.write(data, 0, numBytesRead);
                 totalBytesRead += numBytesRead;
-//                final int currentProgress = (int) ((((double) downloadedFileSize) / ((double) fileSize)) * 100000d);
                 int newProgressPercent = Math.round((float) totalBytesRead / fileSize * 100);
                 if (newProgressPercent != currentProgressPercent) {
                     currentProgressPercent = newProgressPercent;
-//                    ZLogger.log("Download progress: " + currentProgressPercent);
                     for (IUpdateProgressListener listener : progressListeners) {
                         listener.onDownloadProgress(currentProgressPercent);
                     }
@@ -282,8 +277,8 @@ public class UpdateManager {
             outputStream.close();
             return true;
         } catch (IOException e) {
-            e.printStackTrace();
             ZLogger.log("Error while downloading file!");
+            ZLogger.log(e.getStackTrace());
             return false;
         }
     }
@@ -295,12 +290,12 @@ public class UpdateManager {
      */
     private boolean copy() {
         ZLogger.log("Copying file...");
-        ZLogger.log("Target: " + DIRECTORY + jarName);
+        ZLogger.log("Target: " + DIRECTORY + TEMP_FILE_NAME);
         ZLogger.log("Destination: " + launchPath);
         int MAX_COPY_ATTEMPTS = 5;
         for (int i = 0; i < MAX_COPY_ATTEMPTS; i++) {
             try {
-                Files.copy(Paths.get(DIRECTORY + jarName), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
                 ZLogger.log("Files copied successfully.");
                 return true;
             } catch (IOException e) {
@@ -309,7 +304,7 @@ public class UpdateManager {
                 ZLogger.log(e.getStackTrace());
             }
         }
-        ZLogger.log("Error while copying files!");
+        ZLogger.log("Failed to copy files!");
         return false;
     }
 
