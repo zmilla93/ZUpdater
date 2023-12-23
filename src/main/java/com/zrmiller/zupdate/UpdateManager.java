@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.regex.Matcher;
 
 /**
  * An update system for a single jar program using the GitHub API.
@@ -29,27 +30,20 @@ import java.util.Arrays;
  */
 public class UpdateManager {
 
+    private static final int BYTE_BUFFER_SIZE = 1024 * 4;
+    private static final String LAUNCH_PATH_PREFIX = "launcher:";
+    private static final String TEMP_FILE_NAME = "SlimTrade-Updater.jar";
 
     private final AppVersion CURRENT_VERSION;
     private final String DIRECTORY;
     private final String LATEST_VERSION_URL;
     private final String ALL_RELEASES_URL;
-
-    private static final int BYTE_BUFFER_SIZE = 1024 * 4;
+    private final boolean VALID_DIRECTORY;
 
     private ReleaseVersion latestRelease;
     private String launchPath;
-    //    private String jarName;
-//    private String originalJarName;
-    private final boolean VALID_DIRECTORY;
-
-    private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
-
-    private static final String JAR_PREFIX = "jar:";
-    private static final String LAUNCH_PATH_PREFIX = "launcher:";
-    private static final String TEMP_FILE_NAME = "SlimTrade-Updater.jar";
-
     private UpdateCommand currentAction = UpdateCommand.NONE;
+    private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
 
     /**
      * Directory will contain update.json and store temp files.
@@ -59,23 +53,19 @@ public class UpdateManager {
      * @param directory Directory where downloaded file will be stored temporarily
      */
     public UpdateManager(String author, String repo, String directory, AppVersion version) {
-        this.DIRECTORY = directory;
+        this.DIRECTORY = cleanPath(directory);
         this.CURRENT_VERSION = version;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
         VALID_DIRECTORY = validateDirectory();
+        if (!VALID_DIRECTORY) ZLogger.log("Failed to validate directory: " + DIRECTORY);
     }
 
     /**
      * Begins the entire update process.
      */
     public void runUpdateProcess() {
-        ZLogger.log("Running update process...");
-        if (!isUpdateAvailable()) return;
-        ZLogger.log("JARNAME:" + latestRelease.FILE_NAME);
-        // FIXME : Make sure jar:[JarName] is correct. Should this be the original jar name or the remote jar name?
-        //         That arg might not even be used.
-        String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), JAR_PREFIX + latestRelease.FILE_NAME, LAUNCH_PATH_PREFIX + getLaunchPath()};
+        String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), LAUNCH_PATH_PREFIX + getLaunchPath()};
         continueUpdateProcess(args);
     }
 
@@ -86,15 +76,13 @@ public class UpdateManager {
      * @param args The command line arguments of the program.
      */
     public void continueUpdateProcess(String[] args) {
+        // Parse program args
         ArrayList<String> launchArgs = new ArrayList<>();
         for (String arg : args) {
             if (arg.startsWith(LAUNCH_PATH_PREFIX)) {
                 launchArgs.add(arg);
                 launchPath = arg.replaceFirst(LAUNCH_PATH_PREFIX, "");
-//                jarName = launchPath.replaceFirst(".*[\\\\/]", "");
-                ZLogger.log("Launcher Path: " + launchPath);
-//                ZLogger.log("jarName: " + jarName);
-                break;
+                continue;
             }
             if (arg.equals(UpdateCommand.DOWNLOAD.toString())) currentAction = UpdateCommand.DOWNLOAD;
             if (arg.equals(UpdateCommand.PATCH.toString())) currentAction = UpdateCommand.PATCH;
@@ -104,15 +92,17 @@ public class UpdateManager {
             launchPath = getLaunchPath();
             launchArgs.add(LAUNCH_PATH_PREFIX + launchPath);
         }
-        // FIXME: Convert to switch
-        if (currentAction == UpdateCommand.DOWNLOAD) {
-            boolean success = downloadFile();
-            if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateCommand.PATCH, launchArgs);
-        } else if (currentAction == UpdateCommand.PATCH) {
-            patch();
-            runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
-        } else if (currentAction == UpdateCommand.CLEAN) {
-            clean();
+        // Run the target action based on args
+        switch (currentAction) {
+            case DOWNLOAD -> {
+                boolean success = downloadFile();
+                if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateCommand.PATCH, launchArgs);
+            }
+            case PATCH -> {
+                patch();
+                runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
+            }
+            case CLEAN -> clean();
         }
     }
 
@@ -132,22 +122,20 @@ public class UpdateManager {
      * @return Update available
      */
     public boolean isUpdateAvailable(boolean forceCheck) {
-        if (!VALID_DIRECTORY) {
-            ZLogger.log("Failed to validate directory: " + DIRECTORY);
-            return false;
-        }
+        if (!VALID_DIRECTORY) return false;
         String currentVersionString = CURRENT_VERSION.toString();
-        if (currentVersionString == null)
-            return false;
+        if (currentVersionString == null) return false;
         if (latestRelease == null || forceCheck) {
+            ZLogger.log("Checking for update...");
+            ZLogger.log("Current version: " + currentVersionString);
             latestRelease = fetchLatestReleaseData();
-            if (latestRelease == null)
-                return false;
+            if (latestRelease == null) return false;
+            ZLogger.log("Latest version: " + latestRelease.TAG);
         }
-        // FIXME : Move this so that it only prints once
-        ZLogger.log("Current version: " + currentVersionString);
-        ZLogger.log("Latest version: " + latestRelease.TAG);
-        return !currentVersionString.equals(latestRelease.TAG);
+        boolean updateAvailable = !currentVersionString.equals(latestRelease.TAG);
+        if (updateAvailable) ZLogger.log("Update available!");
+        else ZLogger.log("Program is up to date.");
+        return updateAvailable;
     }
 
     /**
@@ -179,7 +167,6 @@ public class UpdateManager {
 
 
     private ReleaseVersion fetchLatestReleaseData() {
-        ZLogger.log("Fetching latest release from " + LATEST_VERSION_URL + "...");
         try {
             // Fetch the latest release info
             HttpURLConnection httpConnection = (HttpURLConnection) (new URL(LATEST_VERSION_URL).openConnection());
@@ -199,8 +186,7 @@ public class UpdateManager {
             JsonObject asset = json.getAsJsonArray("assets").get(0).getAsJsonObject();
             String fileName = asset.get("name").getAsString();
             String url = asset.get("browser_download_url").getAsString();
-            latestRelease = new ReleaseVersion(tag, fileName, url);
-            return latestRelease;
+            return new ReleaseVersion(tag, fileName, url);
         } catch (IOException e) {
             ZLogger.log("UpdateManager failed to fetch latest version! Make sure there is a jar file uploaded to the releases section and has a version tag in the correct format!");
             return null;
@@ -218,11 +204,16 @@ public class UpdateManager {
         try {
             String path = UpdateManager.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
             if (path.startsWith("/")) path = path.replaceFirst("/", "");
-            return path;
+            return cleanPath(path);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
         }
+    }
+
+    // FIXME : Either remove this, or also apply it to the log file
+    private String cleanPath(String path) {
+        return path.replaceAll("[/\\\\]", Matcher.quoteReplacement(File.separator));
     }
 
     public UpdateCommand getCurrentUpdateAction() {
@@ -251,18 +242,12 @@ public class UpdateManager {
      * @return Success
      */
     private boolean downloadFile() {
-        ZLogger.log("Downloading new version...");
+        ZLogger.log("Downloading new version from " + latestRelease.DOWNLOAD_URL + "...");
         try {
-            if (latestRelease == null) fetchLatestReleaseData();
+            if (latestRelease == null) latestRelease = fetchLatestReleaseData();
             if (latestRelease == null) return false;
-            ZLogger.log("File Name: " + latestRelease.FILE_NAME + "...");
-            ZLogger.log("Version: " + latestRelease.TAG);
-            ZLogger.log("URL: " + latestRelease.DOWNLOAD_URL);
-            ZLogger.log("Output directory: " + DIRECTORY);
-            ZLogger.log("Output file: " + latestRelease.FILE_NAME);
             HttpURLConnection httpConnection = (HttpURLConnection) (new URL(latestRelease.DOWNLOAD_URL).openConnection());
             int fileSize = httpConnection.getContentLength();
-            ZLogger.log("File size:" + fileSize);
             BufferedInputStream inputStream = new BufferedInputStream(httpConnection.getInputStream());
             BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + TEMP_FILE_NAME)));
             byte[] data = new byte[BYTE_BUFFER_SIZE];
@@ -292,8 +277,6 @@ public class UpdateManager {
 
     /**
      * Copies the new jar from the temp directory to the user's original directory.
-     *
-     * @return Success
      */
     private void patch() {
         ZLogger.log("Copying file...");
@@ -301,13 +284,16 @@ public class UpdateManager {
         ZLogger.log("Destination: " + launchPath);
         try {
             Files.copy(Paths.get(DIRECTORY + TEMP_FILE_NAME), Paths.get(launchPath), StandardCopyOption.REPLACE_EXISTING);
-            ZLogger.log("Files copied successfully.");
+            ZLogger.log("File copied successfully.");
         } catch (IOException e) {
-            ZLogger.log("Failed to copy files!");
+            ZLogger.log("Failed to copy file!");
             ZLogger.log(e.getStackTrace());
         }
     }
 
+    /**
+     * Deletes temporary jar file used for patching.
+     */
     private void clean() {
         ZLogger.log("Cleaning...");
         Path tempFilePath = Paths.get(DIRECTORY + TEMP_FILE_NAME);

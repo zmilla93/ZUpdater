@@ -16,51 +16,47 @@ import java.util.Date;
 // FIXME : Add support for legacy file format?
 public class ZLogger {
 
-    private static BufferedWriter writer;
-    private static String logFile;
-    private static String DIRECTORY;
     private static final String FILE_PREFIX = "log_";
     private static final String SUBFOLDER = "logs";
-    private static final String logPrefix = "logfile:";
-
+    private static final String LOG_ARG_PREFIX = "logfile:";
     private static final int MAX_LOG_FILES = 5;
-    private static boolean VALID_DIRECTORY;
 
-    // Converts System.currentTime() to a timestamp usable in a file name
-    private static final SimpleDateFormat fileFormatter = new SimpleDateFormat("yyyy-MM-dd_HH'h'mm'm'ss's'");
-    // Converts System.currentTime() to a timestamp usable during logging
+    private static BufferedWriter writer;
+    private static String logFile;
+    private static String directory;
+    private static boolean isOpen = false;
+
+    private static final SimpleDateFormat fileNameFormatter = new SimpleDateFormat("yyyy-MM-dd_HH'h'mm'm'ss's'");
     private static final SimpleDateFormat timestampFormatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-    // Regex for file matching
     private static final String regString = FILE_PREFIX + "(?<year>\\d+)-(?<month>\\d+)-(?<day>\\d+)_(?<hour>\\d+)h(?<minute>\\d+)m(?<second>\\d+)s\\.txt";
 
     public static void open(String appDirectory, String[] args) {
-        DIRECTORY = appDirectory + SUBFOLDER;
-        System.out.println(DIRECTORY);
-        VALID_DIRECTORY = validateDirectory(DIRECTORY);
-        if (!VALID_DIRECTORY) {
-            System.err.println("Failed to validate logging directory: " + DIRECTORY);
+        directory = appDirectory + SUBFOLDER;
+        System.out.println(directory);
+        if (!validateDirectory(directory)) {
+            System.err.println("Failed to validate logging directory: " + directory);
             return;
         }
         boolean newFile = false;
         for (String arg : args) {
-            if (arg.startsWith(logPrefix)) {
-                logFile = arg.replaceFirst(logPrefix, "");
+            if (arg.startsWith(LOG_ARG_PREFIX)) {
+                logFile = arg.replaceFirst(LOG_ARG_PREFIX, "");
                 break;
             }
         }
         if (logFile == null) {
-            String time = fileFormatter.format(System.currentTimeMillis());
-            logFile = DIRECTORY + File.separator + FILE_PREFIX + time + ".txt";
+            String time = fileNameFormatter.format(System.currentTimeMillis());
+            logFile = directory + File.separator + FILE_PREFIX + time + ".txt";
             newFile = true;
         }
         try {
             if (newFile) {
                 writer = new BufferedWriter(new FileWriter(logFile));
-                cleanOldFiles();
             } else writer = new BufferedWriter(new FileWriter(logFile, true));
         } catch (IOException e) {
             e.printStackTrace();
         }
+        isOpen = true;
     }
 
     public static void err(String message) {
@@ -72,12 +68,13 @@ public class ZLogger {
     }
 
     public static void log(String message, boolean error) {
+        if (error) System.err.println(message);
+        else System.out.println(message);
+        if (!isOpen) return;
         try {
             String time = timestampFormatter.format(System.currentTimeMillis());
             time = time + " | ";
             writer.write(time + message + "\n");
-            if (error) System.err.println(message);
-            else System.out.println(message);
             writer.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -95,13 +92,12 @@ public class ZLogger {
     }
 
     public static String getLaunchArg() {
-        return logPrefix + logFile;
+        return LOG_ARG_PREFIX + logFile;
     }
 
     public static void close() {
         if (writer == null) return;
         try {
-            log("Program Closed.");
             writer.write("\n");
             writer.close();
             writer = null;
@@ -110,8 +106,8 @@ public class ZLogger {
         }
     }
 
-    private static void cleanOldFiles() {
-        File dir = new File(DIRECTORY);
+    public static void cleanOldLogFiles() {
+        File dir = new File(directory);
         File[] files = dir.listFiles();
         ArrayList<Date> dates = new ArrayList<>();
         if (files == null) return;
@@ -130,8 +126,8 @@ public class ZLogger {
         // Delete old log files
         while (dates.size() > MAX_LOG_FILES && attempts < MAX_FILE_DELETIONS) {
             Date oldestDate = Collections.min(dates);
-            String fileTimestamp = fileFormatter.format(oldestDate);
-            String path = DIRECTORY + File.separator + FILE_PREFIX + fileTimestamp + ".txt";
+            String fileTimestamp = fileNameFormatter.format(oldestDate);
+            String path = directory + File.separator + FILE_PREFIX + fileTimestamp + ".txt";
             File file = new File(path);
             if (file.delete()) log("Deleted old log file: " + path);
             else log("Failed to delete file: " + path);

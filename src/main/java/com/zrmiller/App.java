@@ -27,6 +27,7 @@ public class App {
     public static void main(String[] args) {
         ZLogger.open(directory, args);
         ZLogger.log("Program Launched: " + Arrays.toString(args));
+        ZLogger.cleanOldLogFiles();
         appInfo = readAppInfo();
 
         AppVersion.runTest();
@@ -38,7 +39,6 @@ public class App {
             throw new RuntimeException(e);
         }
 
-        // FIXME : Copying files sometimes fails, not sure why (I think it is from a previous jar file being open)
         UpdateManager updateManager = null;
         updateManager = handleUpdate(args);
 
