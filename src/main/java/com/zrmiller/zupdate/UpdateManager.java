@@ -13,7 +13,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.regex.Matcher;
 
 /**
  * An update system for a single jar program using the GitHub API.
@@ -29,6 +28,8 @@ import java.util.regex.Matcher;
  * </pre>
  */
 public class UpdateManager {
+
+    // TODO : Add a function to fetch patch notes, and possibly save them to disk.
 
     private static final int BYTE_BUFFER_SIZE = 1024 * 4;
     private static final String LAUNCH_PATH_PREFIX = "launcher:";
@@ -53,11 +54,11 @@ public class UpdateManager {
      * @param directory Directory where downloaded file will be stored temporarily
      */
     public UpdateManager(String author, String repo, String directory, AppVersion version) {
-        this.DIRECTORY = cleanFileSeparators(directory);
+        this.DIRECTORY = UpdateUtil.cleanFileSeparators(directory);
         this.CURRENT_VERSION = version;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
-        VALID_DIRECTORY = validateDirectory();
+        VALID_DIRECTORY = UpdateUtil.validateDirectory(DIRECTORY);
         if (!VALID_DIRECTORY) ZLogger.log("Failed to validate directory: " + DIRECTORY);
     }
 
@@ -141,7 +142,7 @@ public class UpdateManager {
     /**
      * Reruns the program at the specified path, running the specified command on launch.
      *
-     * @param path          Location of the .jar file to run
+     * @param path         Location of the .jar file to run
      * @param updateAction Command to run
      */
     private void runProcess(String path, UpdateAction updateAction, ArrayList<String> additionalArgs) {
@@ -193,27 +194,15 @@ public class UpdateManager {
         }
     }
 
-    // FIXME : Move to utility?
-    private boolean validateDirectory() {
-        File file = new File(DIRECTORY);
-        if (file.exists()) return file.isDirectory();
-        return file.mkdirs();
-    }
-
     private String getLaunchPath() {
         try {
             String path = UpdateManager.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
             if (path.startsWith("/")) path = path.replaceFirst("/", "");
-            return cleanFileSeparators(path);
+            return UpdateUtil.cleanFileSeparators(path);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
         }
-    }
-
-    // FIXME : Either remove this, or also apply it to the log file
-    private String cleanFileSeparators(String path) {
-        return path.replaceAll("[/\\\\]", Matcher.quoteReplacement(File.separator));
     }
 
     public UpdateAction getCurrentUpdateAction() {

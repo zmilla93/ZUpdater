@@ -13,7 +13,7 @@ import java.util.Date;
 /**
  * A simple logging implementation that works through program starts.
  */
-// FIXME : Add support for legacy file format?
+// FIXME : Add support for legacy log file format?
 public class ZLogger {
 
     private static final String FILE_PREFIX = "log_";
@@ -31,9 +31,9 @@ public class ZLogger {
     private static final String regString = FILE_PREFIX + "(?<year>\\d+)-(?<month>\\d+)-(?<day>\\d+)_(?<hour>\\d+)h(?<minute>\\d+)m(?<second>\\d+)s\\.txt";
 
     public static void open(String appDirectory, String[] args) {
-        directory = appDirectory + SUBFOLDER;
+        directory = UpdateUtil.cleanFileSeparators(appDirectory) + SUBFOLDER;
         System.out.println(directory);
-        if (!validateDirectory(directory)) {
+        if (!UpdateUtil.validateDirectory(directory)) {
             System.err.println("Failed to validate logging directory: " + directory);
             return;
         }
@@ -134,13 +134,6 @@ public class ZLogger {
             dates.remove(oldestDate);
             attempts++;
         }
-    }
-
-    // FIXME : Move to Utility?
-    private static boolean validateDirectory(String directory) {
-        File file = new File(directory);
-        if (file.exists()) return file.isDirectory();
-        return file.mkdirs();
     }
 
     private static String fileNameToTimestamp(String fileName) {
