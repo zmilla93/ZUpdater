@@ -112,7 +112,7 @@
             <target>1.8</target>
           </configuration>
         </plugin>
-        <!-- Used to run jar from updateCommand line -->
+        <!-- Used to run jar from command line -->
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>exec-maven-plugin</artifactId>

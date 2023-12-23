@@ -42,7 +42,7 @@ public class UpdateManager {
 
     private ReleaseVersion latestRelease;
     private String launchPath;
-    private UpdateCommand currentAction = UpdateCommand.NONE;
+    private UpdateAction currentAction = UpdateAction.NONE;
     private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
 
     /**
@@ -53,7 +53,7 @@ public class UpdateManager {
      * @param directory Directory where downloaded file will be stored temporarily
      */
     public UpdateManager(String author, String repo, String directory, AppVersion version) {
-        this.DIRECTORY = cleanPath(directory);
+        this.DIRECTORY = cleanFileSeparators(directory);
         this.CURRENT_VERSION = version;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
@@ -65,7 +65,7 @@ public class UpdateManager {
      * Begins the entire update process.
      */
     public void runUpdateProcess() {
-        String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), LAUNCH_PATH_PREFIX + getLaunchPath()};
+        String[] args = new String[]{UpdateAction.DOWNLOAD.toString(), LAUNCH_PATH_PREFIX + getLaunchPath()};
         continueUpdateProcess(args);
     }
 
@@ -84,9 +84,9 @@ public class UpdateManager {
                 launchPath = arg.replaceFirst(LAUNCH_PATH_PREFIX, "");
                 continue;
             }
-            if (arg.equals(UpdateCommand.DOWNLOAD.toString())) currentAction = UpdateCommand.DOWNLOAD;
-            if (arg.equals(UpdateCommand.PATCH.toString())) currentAction = UpdateCommand.PATCH;
-            if (arg.equals(UpdateCommand.CLEAN.toString())) currentAction = UpdateCommand.CLEAN;
+            if (arg.equals(UpdateAction.DOWNLOAD.toString())) currentAction = UpdateAction.DOWNLOAD;
+            if (arg.equals(UpdateAction.PATCH.toString())) currentAction = UpdateAction.PATCH;
+            if (arg.equals(UpdateAction.CLEAN.toString())) currentAction = UpdateAction.CLEAN;
         }
         if (launchPath == null) {
             launchPath = getLaunchPath();
@@ -96,11 +96,11 @@ public class UpdateManager {
         switch (currentAction) {
             case DOWNLOAD -> {
                 boolean success = downloadFile();
-                if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateCommand.PATCH, launchArgs);
+                if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateAction.PATCH, launchArgs);
             }
             case PATCH -> {
                 patch();
-                runProcess(launchPath, UpdateCommand.CLEAN, launchArgs);
+                runProcess(launchPath, UpdateAction.CLEAN, launchArgs);
             }
             case CLEAN -> clean();
         }
@@ -142,21 +142,21 @@ public class UpdateManager {
      * Reruns the program at the specified path, running the specified command on launch.
      *
      * @param path          Location of the .jar file to run
-     * @param updateCommand Command to run
+     * @param updateAction Command to run
      */
-    private void runProcess(String path, UpdateCommand updateCommand, ArrayList<String> additionalArgs) {
+    private void runProcess(String path, UpdateAction updateAction, ArrayList<String> additionalArgs) {
         ArrayList<String> args = new ArrayList<>();
         args.add("java");
         args.add("-jar");
         args.add(path);
-        args.add(updateCommand.toString());
+        args.add(updateAction.toString());
         args.add(ZLogger.getLaunchArg());
         args.addAll(additionalArgs);
         ProcessBuilder builder = new ProcessBuilder(args);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         try {
-            ZLogger.log("Running '" + updateCommand + "' process... " + Arrays.toString(args.toArray()));
+            ZLogger.log("Running '" + updateAction + "' process... " + Arrays.toString(args.toArray()));
             ZLogger.close();
             builder.start();
             System.exit(0);
@@ -204,7 +204,7 @@ public class UpdateManager {
         try {
             String path = UpdateManager.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
             if (path.startsWith("/")) path = path.replaceFirst("/", "");
-            return cleanPath(path);
+            return cleanFileSeparators(path);
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
@@ -212,11 +212,11 @@ public class UpdateManager {
     }
 
     // FIXME : Either remove this, or also apply it to the log file
-    private String cleanPath(String path) {
+    private String cleanFileSeparators(String path) {
         return path.replaceAll("[/\\\\]", Matcher.quoteReplacement(File.separator));
     }
 
-    public UpdateCommand getCurrentUpdateAction() {
+    public UpdateAction getCurrentUpdateAction() {
         return currentAction;
     }
 

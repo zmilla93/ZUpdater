@@ -61,7 +61,7 @@ public class App {
     public static UpdateManager handleUpdate(String[] args) {
         UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
         updateManager.continueUpdateProcess(args);
-        if (updateManager.getCurrentUpdateAction() != UpdateCommand.CLEAN && updateManager.isUpdateAvailable()) {
+        if (updateManager.getCurrentUpdateAction() != UpdateAction.CLEAN && updateManager.isUpdateAvailable()) {
             updateManager.addProgressListener(progressFrame);
             try {
                 SwingUtilities.invokeAndWait(() -> {

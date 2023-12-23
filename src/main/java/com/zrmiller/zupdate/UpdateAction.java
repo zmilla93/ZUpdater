@@ -1,12 +1,12 @@
 package com.zrmiller.zupdate;
 
-public enum UpdateCommand {
+public enum UpdateAction {
 
     NONE, DOWNLOAD, PATCH, CLEAN;
 
     private final String name;
 
-    UpdateCommand() {
+    UpdateAction() {
         name = name().toLowerCase();
     }
 
@@ -14,4 +14,5 @@ public enum UpdateCommand {
     public String toString() {
         return name;
     }
+
 }
