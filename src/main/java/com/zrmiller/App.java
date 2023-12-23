@@ -39,7 +39,7 @@ public class App {
 
         // FIXME : Copying files sometimes fails, not sure why
         UpdateManager updateManager = null;
-        updateManager = handleUpdate(args);
+//        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {

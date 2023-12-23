@@ -12,8 +12,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Objects;
-import java.util.Properties;
 
 /**
  * An update system for a single jar program using the GitHub API.
@@ -38,7 +36,7 @@ public class UpdateManager {
 
     private static final int BYTE_BUFFER_SIZE = 1024 * 4;
 
-    private DownloadVersion latestVersion;
+    private ReleaseVersion latestRelease;
     private String launchPath;
     private String jarName;
     private final boolean VALID_DIRECTORY;
@@ -71,8 +69,8 @@ public class UpdateManager {
     public void runUpdateProcess() {
         ZLogger.log("Running update process...");
         if (!isUpdateAvailable()) return;
-        ZLogger.log("JARNAME:" + latestVersion.FILE_NAME);
-        String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), JAR_PREFIX + latestVersion.FILE_NAME, LAUNCH_PATH_PREFIX + getLaunchPath()};
+        ZLogger.log("JARNAME:" + latestRelease.FILE_NAME);
+        String[] args = new String[]{UpdateCommand.DOWNLOAD.toString(), JAR_PREFIX + latestRelease.FILE_NAME, LAUNCH_PATH_PREFIX + getLaunchPath()};
         continueUpdateProcess(args);
     }
 
@@ -138,15 +136,15 @@ public class UpdateManager {
         String currentVersionString = CURRENT_VERSION.toString();
         if (currentVersionString == null)
             return false;
-        if (latestVersion == null || forceCheck) {
-            latestVersion = fetchLatestVersion();
-            if (latestVersion == null)
+        if (latestRelease == null || forceCheck) {
+            latestRelease = fetchLatestRelease();
+            if (latestRelease == null)
                 return false;
         }
         // FIXME : Move this so that it only prints once
         ZLogger.log("Current version: " + currentVersionString);
-        ZLogger.log("Latest version: " + latestVersion.TAG);
-        return !currentVersionString.equals(latestVersion.TAG);
+        ZLogger.log("Latest version: " + latestRelease.TAG);
+        return !currentVersionString.equals(latestRelease.TAG);
     }
 
     /**
@@ -177,8 +175,8 @@ public class UpdateManager {
     }
 
 
-    private DownloadVersion fetchLatestVersion() {
-        System.out.println("Fetching latest version... " + LATEST_VERSION_URL);
+    private ReleaseVersion fetchLatestRelease() {
+        System.out.println("Fetching latest release from " + LATEST_VERSION_URL + "...");
         try {
             HttpURLConnection httpConnection = (HttpURLConnection) (new URL(LATEST_VERSION_URL).openConnection());
             BufferedReader inputStream = new BufferedReader(new InputStreamReader(httpConnection.getInputStream()));
@@ -192,8 +190,8 @@ public class UpdateManager {
             JsonObject asset = json.getAsJsonArray("assets").get(0).getAsJsonObject();
             String fileName = asset.get("name").getAsString();
             String url = asset.get("browser_download_url").getAsString();
-            latestVersion = new DownloadVersion(tag, fileName, url);
-            return latestVersion;
+            latestRelease = new ReleaseVersion(tag, fileName, url);
+            return latestRelease;
         } catch (IOException e) {
             ZLogger.log("UpdateManager failed to fetch latest version! Make sure there is a jar file uploaded to the releases section and has a version tag in the correct format!");
             return null;
@@ -251,18 +249,18 @@ public class UpdateManager {
     private boolean downloadFile() {
         ZLogger.log("Downloading new version...");
         try {
-            if (latestVersion == null) fetchLatestVersion();
-            if (latestVersion == null) return false;
-            ZLogger.log("File Name: " + latestVersion.FILE_NAME + "...");
-            ZLogger.log("Version: " + latestVersion.TAG);
-            ZLogger.log("URL: " + latestVersion.DOWNLOAD_URL);
+            if (latestRelease == null) fetchLatestRelease();
+            if (latestRelease == null) return false;
+            ZLogger.log("File Name: " + latestRelease.FILE_NAME + "...");
+            ZLogger.log("Version: " + latestRelease.TAG);
+            ZLogger.log("URL: " + latestRelease.DOWNLOAD_URL);
             ZLogger.log("Output directory: " + DIRECTORY);
-            ZLogger.log("Output file: " + latestVersion.FILE_NAME);
-            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(latestVersion.DOWNLOAD_URL).openConnection());
+            ZLogger.log("Output file: " + latestRelease.FILE_NAME);
+            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(latestRelease.DOWNLOAD_URL).openConnection());
             int fileSize = httpConnection.getContentLength();
             ZLogger.log("File size:" + fileSize);
             BufferedInputStream inputStream = new BufferedInputStream(httpConnection.getInputStream());
-            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + latestVersion.FILE_NAME)));
+            BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + latestRelease.FILE_NAME)));
             byte[] data = new byte[BYTE_BUFFER_SIZE];
             int totalBytesRead = 0;
             int numBytesRead;
