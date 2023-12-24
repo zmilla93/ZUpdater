@@ -1,4 +1,4 @@
-package com.zrmiller.zupdate;
+package com.zrmiller.zupdate.data;
 
 public class ReleaseVersion {
 

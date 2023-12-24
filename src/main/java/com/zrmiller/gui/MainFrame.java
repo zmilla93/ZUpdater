@@ -1,6 +1,6 @@
 package com.zrmiller.gui;
 
-import com.zrmiller.zupdate.AppVersion;
+import com.zrmiller.zupdate.data.AppVersion;
 
 import javax.swing.*;
 import java.awt.*;

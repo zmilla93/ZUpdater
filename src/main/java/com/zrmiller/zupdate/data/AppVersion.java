@@ -1,4 +1,4 @@
-package com.zrmiller.zupdate;
+package com.zrmiller.zupdate.data;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

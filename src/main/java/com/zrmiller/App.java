@@ -2,7 +2,11 @@ package com.zrmiller;
 
 import com.zrmiller.gui.MainFrame;
 import com.zrmiller.gui.ProgressFrame;
-import com.zrmiller.zupdate.*;
+import com.zrmiller.zupdate.UpdateAction;
+import com.zrmiller.zupdate.UpdateManager;
+import com.zrmiller.zupdate.ZLogger;
+import com.zrmiller.zupdate.data.AppInfo;
+import com.zrmiller.zupdate.data.AppVersion;
 
 import javax.swing.*;
 import java.io.BufferedInputStream;

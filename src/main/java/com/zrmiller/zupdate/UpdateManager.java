@@ -2,6 +2,8 @@ package com.zrmiller.zupdate;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.zrmiller.zupdate.data.AppVersion;
+import com.zrmiller.zupdate.data.ReleaseVersion;
 
 import java.io.*;
 import java.net.HttpURLConnection;
