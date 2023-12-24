@@ -33,12 +33,6 @@ public class App {
         ZLogger.log("Program Launched: " + Arrays.toString(args));
         ZLogger.cleanOldLogFiles();
         appInfo = readAppInfo();
-
-//        AppVersion.runTest();
-//        AppVersion.runPreReleaseTest();
-        AppVersion.runTestSort();
-        System.exit(0);
-
         // TEMP PROGRESS BAR:
         try {
             SwingUtilities.invokeAndWait(() -> progressFrame = new ProgressFrame());
@@ -46,8 +40,10 @@ public class App {
             throw new RuntimeException(e);
         }
 
+        // FIXME : Testing
         UpdateManager updateManager = null;
-        updateManager = handleUpdate(args);
+        updateManager = testUpdater(args);
+//        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {
@@ -63,6 +59,12 @@ public class App {
 
         Runtime.getRuntime().addShutdownHook(new Thread(ZLogger::close));
 
+    }
+
+    public static UpdateManager testUpdater(String[] args) {
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
+        updateManager.fetchLatestReleaseFromAll();
+        return updateManager;
     }
 
     public static UpdateManager handleUpdate(String[] args) {

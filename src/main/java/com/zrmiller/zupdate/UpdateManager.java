@@ -1,12 +1,14 @@
 package com.zrmiller.zupdate;
 
-import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.zrmiller.zupdate.data.AppVersion;
 import com.zrmiller.zupdate.data.ReleaseVersion;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -15,6 +17,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * An update system for a single jar program using the GitHub API.
@@ -134,11 +137,11 @@ public class UpdateManager {
         if (latestRelease == null || forceCheck) {
             ZLogger.log("Checking for update...");
             ZLogger.log("Current version: " + currentVersionString);
-            latestRelease = fetchLatestReleaseData();
+            latestRelease = fetchLatestRelease();
             if (latestRelease == null) return false;
-            ZLogger.log("Latest version: " + latestRelease.TAG);
+            ZLogger.log("Latest version: " + latestRelease.tag);
         }
-        boolean updateAvailable = !currentVersionString.equals(latestRelease.TAG);
+        boolean updateAvailable = !currentVersionString.equals(latestRelease.tag);
         if (updateAvailable) ZLogger.log("Update available!");
         else ZLogger.log("Program is up to date.");
         return updateAvailable;
@@ -171,11 +174,37 @@ public class UpdateManager {
         }
     }
 
+    private ReleaseVersion fetchLatestRelease() {
+        JsonElement json = fetchDataFromGitHub(LATEST_VERSION_URL);
+        if (json == null) return null;
+        return new ReleaseVersion(json);
+    }
 
-    private ReleaseVersion fetchLatestReleaseData() {
+    public ReleaseVersion fetchLatestReleaseFromAll() {
+        JsonElement json = fetchDataFromGitHub(LATEST_VERSION_URL);
+        if (json == null) return null;
+        JsonArray array = json.getAsJsonArray();
+        ArrayList<ReleaseVersion> versions = new ArrayList<>();
+        for (JsonElement entry : array) {
+            ReleaseVersion version = new ReleaseVersion(entry);
+            versions.add(version);
+        }
+        Collections.sort(versions);
+        for (ReleaseVersion version : versions) {
+            System.out.println(version);
+        }
+        return null;
+    }
+
+    /**
+     * Fetches data from a GitHub API endpoint.
+     *
+     * @param url GitHub API endpoint
+     * @return A JSON response, or null if request failed.
+     */
+    private JsonElement fetchDataFromGitHub(String url) {
         try {
-            // Fetch the latest release info
-            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(LATEST_VERSION_URL).openConnection());
+            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(url).openConnection());
             BufferedReader inputStream;
             try {
                 inputStream = new BufferedReader(new InputStreamReader(httpConnection.getInputStream()));
@@ -186,17 +215,13 @@ public class UpdateManager {
             StringBuilder builder = new StringBuilder();
             while (inputStream.ready()) builder.append(inputStream.readLine());
             inputStream.close();
-            JsonObject json = JsonParser.parseString(builder.toString()).getAsJsonObject();
-            // Generate a ReleaseVersion
-            String tag = json.get("tag_name").getAsString();
-            JsonObject asset = json.getAsJsonArray("assets").get(0).getAsJsonObject();
-            String fileName = asset.get("name").getAsString();
-            String url = asset.get("browser_download_url").getAsString();
-            return new ReleaseVersion(tag, fileName, url);
+            return JsonParser.parseString(builder.toString());
+        } catch (MalformedURLException e) {
+            ZLogger.log("Failed to fetch data from GitHub, bad URL: " + url);
         } catch (IOException e) {
-            ZLogger.log("UpdateManager failed to fetch latest version! Make sure there is a jar file uploaded to the releases section and has a version tag in the correct format!");
-            return null;
+            ZLogger.log("Failed to fetch data from GitHub.");
         }
+        return null;
     }
 
     private String getLaunchPath() {
@@ -236,11 +261,11 @@ public class UpdateManager {
      * @return Success
      */
     private boolean downloadFile() {
-        ZLogger.log("Downloading new version from " + latestRelease.DOWNLOAD_URL + "...");
+        ZLogger.log("Downloading new version from " + latestRelease.downloadURL + "...");
         try {
-            if (latestRelease == null) latestRelease = fetchLatestReleaseData();
+            if (latestRelease == null) latestRelease = fetchLatestRelease();
             if (latestRelease == null) return false;
-            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(latestRelease.DOWNLOAD_URL).openConnection());
+            HttpURLConnection httpConnection = (HttpURLConnection) (new URL(latestRelease.downloadURL).openConnection());
             int fileSize = httpConnection.getContentLength();
             BufferedInputStream inputStream = new BufferedInputStream(httpConnection.getInputStream());
             BufferedOutputStream outputStream = new BufferedOutputStream(Files.newOutputStream(Paths.get(DIRECTORY + TEMP_FILE_NAME)));
@@ -261,10 +286,14 @@ public class UpdateManager {
             }
             inputStream.close();
             outputStream.close();
+            for (IUpdateProgressListener listener : progressListeners) {
+                listener.onDownloadComplete();
+            }
             return true;
         } catch (IOException e) {
             ZLogger.log("Error while downloading file!");
             ZLogger.log(e.getStackTrace());
+            for (IUpdateProgressListener listener : progressListeners) listener.onDownloadFailed();
             return false;
         }
     }

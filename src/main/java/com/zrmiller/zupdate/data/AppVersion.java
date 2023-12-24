@@ -87,7 +87,7 @@ public class AppVersion implements Comparable<AppVersion> {
         System.out.println(v2.compareTo(v4));
     }
 
-    public static void runTestSort(){
+    public static void runTestSort() {
         ArrayList<AppVersion> list = new ArrayList<>();
         list.add(new AppVersion("v0.2.0"));
         list.add(new AppVersion("v1.2.1"));
