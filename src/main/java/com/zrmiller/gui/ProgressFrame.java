@@ -30,11 +30,13 @@ public class ProgressFrame extends JDialog implements IUpdateProgressListener {
 
     @Override
     public void onDownloadComplete() {
+        assert (SwingUtilities.isEventDispatchThread());
         setVisible(false);
     }
 
     @Override
     public void onDownloadFailed() {
+        assert (SwingUtilities.isEventDispatchThread());
         setVisible(false);
     }
 

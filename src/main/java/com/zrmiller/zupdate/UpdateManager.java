@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.zrmiller.zupdate.data.AppVersion;
 import com.zrmiller.zupdate.data.ReleaseVersion;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -283,20 +284,22 @@ public class UpdateManager {
                 if (newProgressPercent != currentProgressPercent) {
                     currentProgressPercent = newProgressPercent;
                     for (IUpdateProgressListener listener : progressListeners) {
-                        listener.onDownloadProgress(currentProgressPercent);
+                        int finalCurrentProgressPercent = currentProgressPercent;
+                        SwingUtilities.invokeLater(() -> listener.onDownloadProgress(finalCurrentProgressPercent));
                     }
                 }
             }
             inputStream.close();
             outputStream.close();
             for (IUpdateProgressListener listener : progressListeners) {
-                listener.onDownloadComplete();
+                SwingUtilities.invokeLater(listener::onDownloadComplete);
             }
             return true;
         } catch (IOException e) {
             ZLogger.log("Error while downloading file!");
             ZLogger.log(e.getStackTrace());
-            for (IUpdateProgressListener listener : progressListeners) listener.onDownloadFailed();
+            for (IUpdateProgressListener listener : progressListeners)
+                SwingUtilities.invokeLater(listener::onDownloadFailed);
             return false;
         }
     }

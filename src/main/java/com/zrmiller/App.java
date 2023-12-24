@@ -42,8 +42,8 @@ public class App {
 
         // FIXME : Testing
         UpdateManager updateManager = null;
-        updateManager = testUpdater(args);
-//        updateManager = handleUpdate(args);
+//        updateManager = testUpdater(args);
+        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {
