@@ -34,7 +34,10 @@ public class App {
         ZLogger.cleanOldLogFiles();
         appInfo = readAppInfo();
 
-        AppVersion.runTest();
+//        AppVersion.runTest();
+//        AppVersion.runPreReleaseTest();
+        AppVersion.runTestSort();
+        System.exit(0);
 
         // TEMP PROGRESS BAR:
         try {

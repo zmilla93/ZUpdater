@@ -1,5 +1,8 @@
 package com.zrmiller.zupdate.data;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,7 +23,6 @@ public class AppVersion implements Comparable<AppVersion> {
     private static final String matchString = "v?(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(-pre(?<pre>\\d+))?";
     private static final Pattern pattern = Pattern.compile(matchString);
 
-    // FIXME : Implement prerelease
     public AppVersion(String tag) {
         Matcher matcher = null;
         if (tag != null) {
@@ -73,15 +75,51 @@ public class AppVersion implements Comparable<AppVersion> {
         System.out.println(v4.isPreRelease);
     }
 
+    public static void runPreReleaseTest() {
+        AppVersion v1 = new AppVersion("v0.3.5");
+        AppVersion v2 = new AppVersion("v0.4.0-pre1");
+        AppVersion v3 = new AppVersion("v0.4.0-pre2");
+        AppVersion v4 = new AppVersion("v0.4.1");
+
+        System.out.println(v1.compareTo(v2));
+        System.out.println(v2.compareTo(v3));
+        System.out.println(v3.compareTo(v4));
+        System.out.println(v2.compareTo(v4));
+    }
+
+    public static void runTestSort(){
+        ArrayList<AppVersion> list = new ArrayList<>();
+        list.add(new AppVersion("v0.2.0"));
+        list.add(new AppVersion("v1.2.1"));
+        list.add(new AppVersion("v1.2.0"));
+        list.add(new AppVersion("v1.2.0-pre4"));
+        list.add(new AppVersion("v0.0.2-pre1"));
+        list.add(new AppVersion("v1.0.0"));
+        list.add(new AppVersion("v0.2.0-pre81"));
+        list.add(new AppVersion("v0.0.2"));
+        list.add(new AppVersion("v1.2.0-pre5"));
+        list.add(new AppVersion("v0.0.3"));
+        list.add(new AppVersion("v0.2.0-pre3"));
+        list.add(new AppVersion("v1.2.0-pre23"));
+        System.out.println(Arrays.toString(list.toArray()));
+        Collections.sort(list);
+        System.out.println(Arrays.toString(list.toArray()));
+    }
+
     @Override
-    // FIXME : Add prerelease support
-    public int compareTo(AppVersion o) {
-        if (o.major > major) return -1;
-        else if (o.major < major) return 1;
-        else if (o.minor > minor) return -1;
-        else if (o.minor < minor) return 1;
-        else if (o.patch > patch) return -1;
-        else if (o.patch < patch) return 1;
+    public int compareTo(AppVersion other) {
+        if (other.major > major) return -1;
+        else if (other.major < major) return 1;
+        else if (other.minor > minor) return -1;
+        else if (other.minor < minor) return 1;
+        else if (other.patch > patch) return -1;
+        else if (other.patch < patch) return 1;
+        if (isPreRelease && !other.isPreRelease) return -1;
+        if (!isPreRelease && other.isPreRelease) return 1;
+        if (isPreRelease) {
+            if (other.pre > pre) return -1;
+            if (other.pre < pre) return 1;
+        }
         return 0;
     }
 
