@@ -28,4 +28,14 @@ public class ProgressFrame extends JDialog implements IUpdateProgressListener {
         progressBar.setValue(progressPercent);
     }
 
+    @Override
+    public void onDownloadComplete() {
+        setVisible(false);
+    }
+
+    @Override
+    public void onDownloadFailed() {
+        setVisible(false);
+    }
+
 }
