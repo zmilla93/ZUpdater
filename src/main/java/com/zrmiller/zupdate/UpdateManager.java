@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 /**
- * An update system for a single jar program using the GitHub API.
+ * An update system for a single JAR program using the GitHub API.
  * <p>
  * Example Usage:
  * <pre>
@@ -55,11 +55,12 @@ public class UpdateManager {
     private static final int ACTION_RETRY_DELAY_MS = 50;
 
     /**
-     * Directory will contain update.json and store temp files.
+     * Handles updating a single JAR file program using the GitHub API.
      *
      * @param author    GitHub author
      * @param repo      GitHub repo name
      * @param directory Directory where downloaded file will be stored temporarily
+     * @param version   Version information about the currently running program
      */
     public UpdateManager(String author, String repo, String directory, AppVersion version) {
         this.DIRECTORY = UpdateUtil.cleanFileSeparators(directory);
@@ -148,10 +149,11 @@ public class UpdateManager {
     }
 
     /**
-     * Reruns the program at the specified path, running the specified command on launch.
+     * Reruns the program at the specified path, running the specified UpdateAction on launch.
      *
-     * @param path         Location of the .jar file to run
-     * @param updateAction Command to run
+     * @param path           Location of the JAR file to run
+     * @param updateAction   UpdateAction to perform
+     * @param additionalArgs A list of command line arguments that should be passed to the next program run
      */
     private void runProcess(String path, UpdateAction updateAction, ArrayList<String> additionalArgs) {
         ArrayList<String> args = new ArrayList<>();
@@ -181,11 +183,12 @@ public class UpdateManager {
     }
 
     public ReleaseVersion fetchLatestReleaseFromAll() {
-        JsonElement json = fetchDataFromGitHub(LATEST_VERSION_URL);
+        JsonElement json = fetchDataFromGitHub(ALL_RELEASES_URL);
         if (json == null) return null;
         JsonArray array = json.getAsJsonArray();
         ArrayList<ReleaseVersion> versions = new ArrayList<>();
         for (JsonElement entry : array) {
+            System.out.println(entry);
             ReleaseVersion version = new ReleaseVersion(entry);
             versions.add(version);
         }
@@ -256,7 +259,7 @@ public class UpdateManager {
     ////////////////////////
 
     /**
-     * Downloads the new .jar file from GitHub.
+     * Downloads the new JAR file from GitHub.
      *
      * @return Success
      */
@@ -299,7 +302,7 @@ public class UpdateManager {
     }
 
     /**
-     * Copies the new jar from the temp directory to the user's original directory.
+     * Copies the new JAR from the working directory to the user's original directory.
      */
     private void patch() {
         ZLogger.log("Copying file...");
@@ -326,7 +329,7 @@ public class UpdateManager {
     }
 
     /**
-     * Deletes temporary jar file used for patching.
+     * Deletes the temporary JAR file used for patching.
      */
     private void clean() {
         ZLogger.log("Cleaning...");
