@@ -3,6 +3,7 @@ package com.zrmiller.zupdate;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.zrmiller.zupdate.data.AppInfo;
 import com.zrmiller.zupdate.data.AppVersion;
 import com.zrmiller.zupdate.data.ReleaseVersion;
 
@@ -62,11 +63,11 @@ public class UpdateManager {
      * @param author    GitHub author
      * @param repo      GitHub repo name
      * @param directory Directory where downloaded file will be stored temporarily
-     * @param version   Version information about the currently running program
+     * @param appInfo   Information about the currently running app
      */
-    public UpdateManager(String author, String repo, String directory, AppVersion version, boolean allowPreRelease) {
+    public UpdateManager(String author, String repo, String directory, AppInfo appInfo, boolean allowPreRelease) {
         this.DIRECTORY = UpdateUtil.cleanFileSeparators(directory);
-        this.CURRENT_VERSION = version;
+        this.CURRENT_VERSION = appInfo.appVersion;
         this.allowPreRelease = allowPreRelease;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
@@ -107,15 +108,17 @@ public class UpdateManager {
         }
         // Run the target action based on args
         switch (currentAction) {
-            case DOWNLOAD -> {
+            case DOWNLOAD:
                 boolean success = downloadFile();
                 if (success) runProcess(DIRECTORY + TEMP_FILE_NAME, UpdateAction.PATCH, launchArgs);
-            }
-            case PATCH -> {
+                break;
+            case PATCH:
                 patch();
                 runProcess(launchPath, UpdateAction.CLEAN, launchArgs);
-            }
-            case CLEAN -> clean();
+                break;
+            case CLEAN:
+                clean();
+                break;
         }
     }
 

@@ -43,13 +43,13 @@ public class App {
 
         // FIXME : Testing
         UpdateManager updateManager = null;
-//        updateManager = testUpdater(args);
-        updateManager = handleUpdate(args);
+        updateManager = testUpdater(args);
+//        updateManager = handleUpdate(args);
 
         final String[] finalArgs = args;
         try {
             SwingUtilities.invokeAndWait(() -> {
-                MainFrame mainFrame = new MainFrame(finalArgs, appInfo.version());
+                MainFrame mainFrame = new MainFrame(finalArgs, appInfo.appVersion);
                 mainFrame.setVisible(true);
             });
         } catch (InterruptedException | InvocationTargetException e) {
@@ -63,14 +63,14 @@ public class App {
     }
 
     public static UpdateManager testUpdater(String[] args) {
-        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version(), false);
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo, false);
         ReleaseVersion version = updateManager.fetchLatestReleaseFromAll();
         System.out.println("Latest: " + version);
         return updateManager;
     }
 
     public static UpdateManager handleUpdate(String[] args) {
-        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version(), true);
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo, appInfo.appVersion.isPreRelease);
         updateManager.continueUpdateProcess(args);
         if (updateManager.getCurrentUpdateAction() != UpdateAction.CLEAN && updateManager.isUpdateAvailable()) {
             updateManager.addProgressListener(progressFrame);
