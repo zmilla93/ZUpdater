@@ -48,6 +48,7 @@ public class UpdateManager {
     private final boolean VALID_DIRECTORY;
 
     private ReleaseVersion latestRelease;
+    private boolean allowPreRelease;
     private String launchPath;
     private UpdateAction currentAction = UpdateAction.NONE;
     private final ArrayList<IUpdateProgressListener> progressListeners = new ArrayList<>();
@@ -63,9 +64,10 @@ public class UpdateManager {
      * @param directory Directory where downloaded file will be stored temporarily
      * @param version   Version information about the currently running program
      */
-    public UpdateManager(String author, String repo, String directory, AppVersion version) {
+    public UpdateManager(String author, String repo, String directory, AppVersion version, boolean allowPreRelease) {
         this.DIRECTORY = UpdateUtil.cleanFileSeparators(directory);
         this.CURRENT_VERSION = version;
+        this.allowPreRelease = allowPreRelease;
         LATEST_VERSION_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases/latest";
         ALL_RELEASES_URL = "https://api.github.com/repos/" + author + "/" + repo + "/releases";
         VALID_DIRECTORY = UpdateUtil.validateDirectory(DIRECTORY);
@@ -139,7 +141,8 @@ public class UpdateManager {
         if (latestRelease == null || forceCheck) {
             ZLogger.log("Checking for update...");
             ZLogger.log("Current version: " + currentVersionString);
-            latestRelease = fetchLatestRelease();
+            if (allowPreRelease) latestRelease = fetchLatestReleaseFromAll();
+            else latestRelease = fetchLatestRelease();
             if (latestRelease == null) return false;
             ZLogger.log("Latest version: " + latestRelease.tag);
         }
@@ -189,15 +192,15 @@ public class UpdateManager {
         JsonArray array = json.getAsJsonArray();
         ArrayList<ReleaseVersion> versions = new ArrayList<>();
         for (JsonElement entry : array) {
-            System.out.println(entry);
-            ReleaseVersion version = new ReleaseVersion(entry);
-            versions.add(version);
+            ReleaseVersion releaseVersion = new ReleaseVersion(entry);
+            if (!releaseVersion.appVersion.valid) continue;
+            versions.add(releaseVersion);
         }
         Collections.sort(versions);
         for (ReleaseVersion version : versions) {
             System.out.println(version);
         }
-        return null;
+        return versions.get(versions.size() - 1);
     }
 
     /**

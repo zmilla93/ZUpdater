@@ -6,6 +6,9 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Represents a version of the current program.
+ */
 public class AppVersion implements Comparable<AppVersion> {
 
     // Public info

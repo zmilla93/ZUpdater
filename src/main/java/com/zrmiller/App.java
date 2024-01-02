@@ -7,6 +7,7 @@ import com.zrmiller.zupdate.UpdateManager;
 import com.zrmiller.zupdate.ZLogger;
 import com.zrmiller.zupdate.data.AppInfo;
 import com.zrmiller.zupdate.data.AppVersion;
+import com.zrmiller.zupdate.data.ReleaseVersion;
 
 import javax.swing.*;
 import java.io.BufferedInputStream;
@@ -30,7 +31,7 @@ public class App {
 
     public static void main(String[] args) {
         ZLogger.open(directory, args);
-        ZLogger.log("Program Launched: " + Arrays.toString(args));
+        ZLogger.log("Program Started: " + Arrays.toString(args));
         ZLogger.cleanOldLogFiles();
         appInfo = readAppInfo();
         // TEMP PROGRESS BAR:
@@ -55,20 +56,21 @@ public class App {
             e.printStackTrace();
         }
 
-        ZLogger.log("Program Launched!");
+        ZLogger.log("Program fully Launched!");
 
         Runtime.getRuntime().addShutdownHook(new Thread(ZLogger::close));
 
     }
 
     public static UpdateManager testUpdater(String[] args) {
-        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
-        updateManager.fetchLatestReleaseFromAll();
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version(), false);
+        ReleaseVersion version = updateManager.fetchLatestReleaseFromAll();
+        System.out.println("Latest: " + version);
         return updateManager;
     }
 
     public static UpdateManager handleUpdate(String[] args) {
-        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version());
+        UpdateManager updateManager = new UpdateManager("zmilla93", "ZUpdater", directory, appInfo.version(), true);
         updateManager.continueUpdateProcess(args);
         if (updateManager.getCurrentUpdateAction() != UpdateAction.CLEAN && updateManager.isUpdateAvailable()) {
             updateManager.addProgressListener(progressFrame);
