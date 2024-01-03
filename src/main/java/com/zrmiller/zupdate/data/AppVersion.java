@@ -1,8 +1,5 @@
 package com.zrmiller.zupdate.data;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,58 +52,6 @@ public class AppVersion implements Comparable<AppVersion> {
         }
         string = "v" + major + "." + minor + "." + patch;
         if (isPreRelease) string += "-pre" + pre;
-    }
-
-    // FIXME : Move this to an actual test
-    public static void runTest() {
-        AppVersion v1 = new AppVersion("v0.3.5");
-        AppVersion v2 = new AppVersion("v0.4.0");
-        AppVersion v3 = new AppVersion("v0.4.5");
-        AppVersion v4 = new AppVersion("v0.4.5-pre1");
-        AppVersion v5 = new AppVersion("v0.4.5-pre2");
-        AppVersion target = new AppVersion("v0.4.0");
-        int i1 = v1.compareTo(target);
-        int i2 = v2.compareTo(target);
-        int i3 = v3.compareTo(target);
-        System.out.println("patch?" + (i1));
-        System.out.println("patch?" + (i2));
-        System.out.println("patch?" + (i3));
-        System.out.println(v3);
-        System.out.println(v4);
-        System.out.println(v5);
-        System.out.println(v3.isPreRelease);
-        System.out.println(v4.isPreRelease);
-    }
-
-    public static void runPreReleaseTest() {
-        AppVersion v1 = new AppVersion("v0.3.5");
-        AppVersion v2 = new AppVersion("v0.4.0-pre1");
-        AppVersion v3 = new AppVersion("v0.4.0-pre2");
-        AppVersion v4 = new AppVersion("v0.4.1");
-
-        System.out.println(v1.compareTo(v2));
-        System.out.println(v2.compareTo(v3));
-        System.out.println(v3.compareTo(v4));
-        System.out.println(v2.compareTo(v4));
-    }
-
-    public static void runTestSort() {
-        ArrayList<AppVersion> list = new ArrayList<>();
-        list.add(new AppVersion("v0.2.0"));
-        list.add(new AppVersion("v1.2.1"));
-        list.add(new AppVersion("v1.2.0"));
-        list.add(new AppVersion("v1.2.0-pre4"));
-        list.add(new AppVersion("v0.0.2-pre1"));
-        list.add(new AppVersion("v1.0.0"));
-        list.add(new AppVersion("v0.2.0-pre81"));
-        list.add(new AppVersion("v0.0.2"));
-        list.add(new AppVersion("v1.2.0-pre5"));
-        list.add(new AppVersion("v0.0.3"));
-        list.add(new AppVersion("v0.2.0-pre3"));
-        list.add(new AppVersion("v1.2.0-pre23"));
-        System.out.println(Arrays.toString(list.toArray()));
-        Collections.sort(list);
-        System.out.println(Arrays.toString(list.toArray()));
     }
 
     @Override
